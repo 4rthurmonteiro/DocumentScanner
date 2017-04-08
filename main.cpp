@@ -1,49 +1,45 @@
-// DocumentScanner
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 
-#include<opencv2/core/core.hpp>
-#include<opencv2/highgui/highgui.hpp>
-#include<opencv2/imgproc/imgproc.hpp>
-
-#include<iostream>
-
-using namespace std;
 using namespace cv;
+using namespace std;
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
-int main() {
+int main(  )
+{
+    Mat src = imread( "ticket.jpg" );
 
-    Mat imgOriginal;        // input image
-    Mat imgGrayscale;       // grayscale of input image
-    Mat imgBlurred;         // intermediate blured image
-    Mat imgCanny;           // Canny edge image
+    int largest_area=0;
+    int largest_contour_index=0;
+    Rect bounding_rect;
 
-    imgOriginal = imread("ticket.jpg");          // open image
+    Mat thr;
+    cvtColor( src, thr, COLOR_BGR2GRAY ); //Convert to gray
+    threshold( thr, thr, 125, 255, THRESH_BINARY ); //Threshold the gray
 
-    if (imgOriginal.empty()) {                                  // if unable to open image
-        cout << "error: image not read from file\n\n";     // show error message on command line
-        return(0);                                              // and exit program
+    vector<vector<Point> > contours; // Vector for storing contours
+
+    findContours( thr, contours, RETR_CCOMP, CHAIN_APPROX_SIMPLE ); // Find the contours in the image
+
+    for( size_t i = 0; i< contours.size(); i++ ) // iterate through each contour.
+    {
+        double area = contourArea( contours[i] );  //  Find the area of contour
+
+        if( area > largest_area )
+        {
+            largest_area = area;
+            largest_contour_index = i;               //Store the index of largest contour
+            bounding_rect = boundingRect( contours[i] ); // Find the bounding rectangle for biggest contour
+        }
     }
 
-    cvtColor(imgOriginal, imgGrayscale, CV_BGR2GRAY);       // convert to grayscale
+    drawContours( src, contours,largest_contour_index, Scalar( 0, 255, 0 ), 2 ); // Draw the largest contour using previously stored index.
+//    namedWindow("result", CV_WINDOW_NORMAL);
+//    imshow( "result", src );
 
-    GaussianBlur(imgGrayscale,          // input image
-        imgBlurred,                         // output image
-        cv::Size(5, 5),                     // smoothing window width and height in pixels
-        1.5);                               // sigma value, determines how much the image will be blurred
+    Mat cropImage = src(bounding_rect);
+    namedWindow("cropImage", CV_WINDOW_NORMAL);
+    imshow("cropImage", cropImage);
 
-    Canny(imgBlurred,           // input image
-        imgCanny,                   // output image
-        100,                        // low threshold
-        200);                       // high threshold
-
-                                        // declare windows
-    namedWindow("imgOriginal", CV_WINDOW_NORMAL);     // note: you can use CV_WINDOW_NORMAL which allows resizing the window
-    namedWindow("imgCanny", CV_WINDOW_NORMAL);        // or CV_WINDOW_AUTOSIZE for a fixed size window matching the resolution of the image
-                                                            // CV_WINDOW_AUTOSIZE is the default
-    imshow("imgOriginal", imgOriginal);     // show windows
-    imshow("imgCanny", imgCanny);
-
-    waitKey(0);                 // hold windows open until user presses a key
-
-    return(0);
+    waitKey();
+    return 0;
 }
