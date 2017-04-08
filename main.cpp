@@ -6,7 +6,7 @@ using namespace std;
 
 int main(  )
 {
-    Mat src = imread( "ticket.jpg" );
+    Mat src = imread( "notafiscalparanaense.jpg" );
 
     int largest_area=0;
     int largest_contour_index=0;
@@ -37,6 +37,8 @@ int main(  )
 //    imshow( "result", src );
 
     Mat cropImage = src(bounding_rect);
+    cvtColor( cropImage, cropImage, COLOR_BGR2GRAY ); //Convert to gray
+
     namedWindow("cropImage", CV_WINDOW_NORMAL);
     imshow("cropImage", cropImage);
 
