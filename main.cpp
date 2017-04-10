@@ -4,7 +4,7 @@
 using namespace cv;
 using namespace std;
 
-int main(  )
+int main()
 {
     Mat src = imread( "notafiscalparanaense.jpg" );
 
@@ -41,6 +41,9 @@ int main(  )
 
     namedWindow("cropImage", CV_WINDOW_NORMAL);
     imshow("cropImage", cropImage);
+
+	namedWindow("originalImage",CV_WINDOW_NORMAL);
+	imshow("originalImage",CV_WINDOW_NORMAL);
 
     waitKey();
     return 0;

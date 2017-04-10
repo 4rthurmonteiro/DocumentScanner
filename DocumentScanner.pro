@@ -3,7 +3,9 @@ CONFIG += console c++11
 CONFIG -= app_bundle
 CONFIG -= qt
 
-SOURCES += main.cpp
+SOURCES += main.cpp \
+    homography_example.cpp \
+    homography_card_file.cpp
 
 INCLUDEPATH += /usr/local/include/opencv
 
