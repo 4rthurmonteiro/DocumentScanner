@@ -15,21 +15,61 @@ using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
+int edgeThresh = 1;
+int lowThreshold = 90;
+int const max_lowThreshold = 100;
+int ratio = 3;
+int kernel_size = 3;
+char* window_name = "Edge Map";
+
+Mat src, src_gray;
+Mat dst, detected_edges;
+
+/**
+ * @function CannyThreshold
+ * @brief Trackbar callback - Canny thresholds input with a ratio 1:3
+ */
+void CannyThreshold(int, void*)
+{
+  /// Reduce noise with a kernel 3x3
+  blur( src_gray, detected_edges, Size(3,3) );
+
+  /// Canny detector
+  Canny( detected_edges, detected_edges, lowThreshold, lowThreshold*ratio, kernel_size );
+
+  /// Using Canny's output as a mask, we display our result
+  dst = Scalar::all(0);
+
+  src.copyTo( dst, detected_edges);
+ }
+
+
 /* @function main */
 int main( int argc, char** argv )
 {
-  Mat src=imread("card.png");
- Mat thr;
- cvtColor(src,thr,CV_BGR2GRAY);
- threshold( thr, thr, 75, 255,CV_THRESH_BINARY );
+ src=imread("ticket.jpg");
+
+ /// Create a matrix of the same type and size as src (for dst)
+  dst.create( src.size(), src.type() );
+
+  /// Convert the image to grayscale
+  cvtColor( src, src_gray, CV_BGR2GRAY );
+
+  /// Show the image
+   CannyThreshold(0, 0);
+
+
+
 
  vector< vector <Point> > contours; // Vector for storing contour
  vector< Vec4i > hierarchy;
  int largest_contour_index=0;
  int largest_area=0;
 
- Mat dst(src.rows,src.cols,CV_8UC1,Scalar::all(0)); //create destination image
- findContours( thr.clone(), contours, hierarchy,CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE ); // Find the contours in the image
+ Mat dst_h(src.rows,src.cols,CV_8UC1,Scalar::all(0)); //create destination image with homography
+ cvtColor(dst,dst,CV_BGR2GRAY);
+
+ findContours(dst.clone(), contours, hierarchy,CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE ); // Find the contours in the image
  for( int i = 0; i< contours.size(); i++ ){
     double a=contourArea( contours[i],false);  //  Find the area of contour
     if(a>largest_area){
@@ -39,12 +79,12 @@ int main( int argc, char** argv )
  }
 
 
- drawContours( dst,contours, largest_contour_index, Scalar(255,255,255),CV_FILLED, 8, hierarchy );
+ drawContours( dst_h,contours, largest_contour_index, Scalar(255,255,255),CV_FILLED, 8, hierarchy );
  vector<vector<Point> > contours_poly(1);
- approxPolyDP( Mat(contours[largest_contour_index]), contours_poly[0],40, true );
+ approxPolyDP( Mat(contours[largest_contour_index]), contours_poly[0],5, true );
  Rect boundRect=boundingRect(contours[largest_contour_index]);
 
- cout<<"the points of contours_poly[0] are "<<contours_poly[0]<<endl;
+ cout<<"the points of contours_poly[0] are \n"<<contours_poly[0]<<endl;
 
  if(contours_poly[0].size()==4){
     std::vector<Point2f> quad_pts;
@@ -74,9 +114,10 @@ int main( int argc, char** argv )
     rectangle(src,boundRect,Scalar(0,255,0),1,8,0);
     rectangle(transformed,boundRect,Scalar(0,255,0),1,8,0);
 
+    ///limiarização
     Mat transformed_thresholded;
 
-    transformed = transformed(boundRect); //cut image for the interesting region
+//    transformed = transformed(boundRect); //cut image for the interesting region
 
     cvtColor(transformed,transformed_thresholded,CV_BGR2GRAY);
 
@@ -89,8 +130,8 @@ int main( int argc, char** argv )
     namedWindow("thresholded", CV_WINDOW_KEEPRATIO);
     imshow("thresholded", transformed_thresholded);
 
-    namedWindow("thr", CV_WINDOW_KEEPRATIO);
-    imshow("thr",thr);
+//    namedWindow("thr", CV_WINDOW_KEEPRATIO);
+//    imshow("thr",thr);
 
     namedWindow("dst", CV_WINDOW_KEEPRATIO);
     imshow("dst",dst);
@@ -98,9 +139,9 @@ int main( int argc, char** argv )
     namedWindow("src", CV_WINDOW_KEEPRATIO);
     imshow("src",src);
 
-    imwrite("result4.jpg",dst);
-    imwrite("result5.jpg",src);
-    imwrite("result6.jpg",transformed);
+//    imwrite("result4.jpg",dst);
+//    imwrite("result5.jpg",src);
+//    imwrite("result6.jpg",transformed);
     waitKey();
    }
    else
