@@ -16,7 +16,7 @@ using namespace cv::xfeatures2d;
 using namespace std;
 
 int edgeThresh = 1;
-int lowThreshold = 90;
+int lowThreshold = 50;
 int const max_lowThreshold = 100;
 int ratio = 3;
 int kernel_size = 3;
@@ -47,7 +47,10 @@ void CannyThreshold(int, void*)
 /* @function main */
 int main( int argc, char** argv )
 {
- src=imread("ticket.jpg");
+
+ src=imread(argv[1]);
+
+ ///******* DETECÇÃO DE BORDA********///
 
  /// Create a matrix of the same type and size as src (for dst)
   dst.create( src.size(), src.type() );
@@ -60,6 +63,7 @@ int main( int argc, char** argv )
 
 
 
+ ///********HOMOGRAFIA*********///
 
  vector< vector <Point> > contours; // Vector for storing contour
  vector< Vec4i > hierarchy;
@@ -114,10 +118,12 @@ int main( int argc, char** argv )
     rectangle(src,boundRect,Scalar(0,255,0),1,8,0);
     rectangle(transformed,boundRect,Scalar(0,255,0),1,8,0);
 
-    ///limiarização
+
+    ///**********LIMIARIZAÇÃO************///
+
     Mat transformed_thresholded;
 
-//    transformed = transformed(boundRect); //cut image for the interesting region
+    transformed = transformed(boundRect); //cut image for the interesting region
 
     cvtColor(transformed,transformed_thresholded,CV_BGR2GRAY);
 
@@ -130,18 +136,15 @@ int main( int argc, char** argv )
     namedWindow("thresholded", CV_WINDOW_KEEPRATIO);
     imshow("thresholded", transformed_thresholded);
 
-//    namedWindow("thr", CV_WINDOW_KEEPRATIO);
-//    imshow("thr",thr);
-
     namedWindow("dst", CV_WINDOW_KEEPRATIO);
     imshow("dst",dst);
 
     namedWindow("src", CV_WINDOW_KEEPRATIO);
     imshow("src",src);
 
-//    imwrite("result4.jpg",dst);
-//    imwrite("result5.jpg",src);
-//    imwrite("result6.jpg",transformed);
+    imwrite("dst.jpg",dst);
+    imwrite("src.jpg",src);
+    imwrite("transformed.jpg",transformed);
     waitKey();
    }
    else

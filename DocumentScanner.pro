@@ -4,8 +4,10 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += main.cpp \
-    homography_example.cpp \
-    homography_card_file.cpp
+    homography_card_file.cpp \
+    edge_detector.cpp \
+    canny_homography_example.cpp \
+    threshold_homography_example.cpp
 
 INCLUDEPATH += /usr/local/include/opencv
 
