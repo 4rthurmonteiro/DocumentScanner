@@ -18,7 +18,7 @@ Os três exemplos já vem compilados, para executar:
 $ ./threshold_homography_example <path_to_image>/img.jpg
 ```
 Exemplo da imagem de saída:
-[![example_threshold](example_threshold.png)]
+![example_threshold](example_threshold.png)
 
 O projeto também já inclui um ***CMakeList.txt*** para geração do makefile adequado. Edite o arquivo ***CMakeList.txt*** conforme sua necessidade então, execute o seguinte comando:
 ```sh
