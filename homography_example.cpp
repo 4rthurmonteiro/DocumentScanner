@@ -1,5 +1,8 @@
 //FOUND AT http://stackoverflow.com/questions/22519545/automatic-perspective-correction-opencv
-
+//see this too http://stackoverflow.com/questions/6555629/algorithm-to-detect-corners-of-paper-sheet-in-photo
+//FOR THRESHOLD:
+//http://docs.opencv.org/3.2.0/d7/d1b/group__imgproc__misc.html#ga72b913f352e4a1b1b397736707afcde3
+//http://docs.opencv.org/3.2.0/db/d8e/tutorial_threshold.html
 #include <stdio.h>
 #include <iostream>
 #include <opencv2/core.hpp>
@@ -15,10 +18,10 @@ using namespace std;
 /* @function main */
 int main( int argc, char** argv )
 {
-  Mat src=imread("qrcode_nota2.JPG");
+  Mat src=imread("card.png");
  Mat thr;
  cvtColor(src,thr,CV_BGR2GRAY);
- threshold( thr, thr, 100, 255,CV_THRESH_BINARY );
+ threshold( thr, thr, 75, 255,CV_THRESH_BINARY );
 
  vector< vector <Point> > contours; // Vector for storing contour
  vector< Vec4i > hierarchy;
@@ -37,7 +40,6 @@ int main( int argc, char** argv )
 
 
  drawContours( dst,contours, largest_contour_index, Scalar(255,255,255),CV_FILLED, 8, hierarchy );
-
  vector<vector<Point> > contours_poly(1);
  approxPolyDP( Mat(contours[largest_contour_index]), contours_poly[0],40, true );
  Rect boundRect=boundingRect(contours[largest_contour_index]);
@@ -72,9 +74,20 @@ int main( int argc, char** argv )
     rectangle(src,boundRect,Scalar(0,255,0),1,8,0);
     rectangle(transformed,boundRect,Scalar(0,255,0),1,8,0);
 
-    //transformed = transformed(boundRect);
+    Mat transformed_thresholded;
+
+    transformed = transformed(boundRect); //cut image for the interesting region
+
+    cvtColor(transformed,transformed_thresholded,CV_BGR2GRAY);
+
+    adaptiveThreshold(transformed_thresholded,transformed_thresholded,255,ADAPTIVE_THRESH_GAUSSIAN_C,THRESH_BINARY,11,12);
+//    threshold( transformed_thresholded, transformed_thresholded, 150, 255,CV_THRESH_BINARY );
+
     namedWindow("quadrilateral", CV_WINDOW_KEEPRATIO);
     imshow("quadrilateral", transformed);
+
+    namedWindow("thresholded", CV_WINDOW_KEEPRATIO);
+    imshow("thresholded", transformed_thresholded);
 
     namedWindow("thr", CV_WINDOW_KEEPRATIO);
     imshow("thr",thr);
