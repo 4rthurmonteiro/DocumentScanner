@@ -7,7 +7,8 @@ SOURCES += main.cpp \
     homography_card_file.cpp \
     edge_detector.cpp \
     canny_homography_example.cpp \
-    threshold_homography_example.cpp
+    threshold_homography_example.cpp \
+    opencv-tesseract.cpp
 
 INCLUDEPATH += /usr/local/include/opencv
 

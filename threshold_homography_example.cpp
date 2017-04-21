@@ -3,6 +3,8 @@
 //FOR THRESHOLD:
 //http://docs.opencv.org/3.2.0/d7/d1b/group__imgproc__misc.html#ga72b913f352e4a1b1b397736707afcde3
 //http://docs.opencv.org/3.2.0/db/d8e/tutorial_threshold.html
+//https://github.com/xuwangyin/opencv-tesseract/blob/master/opencv-tesseract.cpp
+
 #include <stdio.h>
 #include <iostream>
 #include <opencv2/core.hpp>
@@ -11,17 +13,42 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/xfeatures2d.hpp>
+#include <tesseract/baseapi.h>
+
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
+
 /* @function main */
 int main( int argc, char** argv )
 {
-  Mat src=imread(argv[1]);
+
+ // initilize tesseract OCR engine
+ tesseract::TessBaseAPI *myOCR = new tesseract::TessBaseAPI();
+ printf("Tesseract-ocr version: %s\n",myOCR->Version());
+
+ // printf("Leptonica version: %s\n",
+ //        getLeptonicaVersion());
+
+ if (myOCR->Init(NULL, "eng")) {
+  fprintf(stderr, "Could not initialize tesseract.\n");
+  exit(1);
+ }
+
+ tesseract::PageSegMode pagesegmode = static_cast<tesseract::PageSegMode>(7); // treat the image as a single text line
+ myOCR->SetPageSegMode(pagesegmode);
+
+ Mat src=imread(argv[1]);
  Mat thr;
+
  cvtColor(src,thr,CV_BGR2GRAY);
  threshold( thr, thr, 75, 255,CV_THRESH_BINARY );
+
+
+ namedWindow("thr_init", CV_WINDOW_KEEPRATIO);
+ imshow("thr_init",thr);
+ waitKey();
 
  vector< vector <Point> > contours; // Vector for storing contour
  vector< Vec4i > hierarchy;
@@ -43,6 +70,10 @@ int main( int argc, char** argv )
  vector<vector<Point> > contours_poly(1);
  approxPolyDP( Mat(contours[largest_contour_index]), contours_poly[0],40, true );
  Rect boundRect=boundingRect(contours[largest_contour_index]);
+
+ namedWindow("bound", CV_WINDOW_KEEPRATIO);
+ imshow("bound",Mat(src,boundRect));
+ waitKey();
 
  cout<<"the points of contours_poly[0] are "<<contours_poly[0]<<endl;
 
@@ -83,6 +114,20 @@ int main( int argc, char** argv )
     adaptiveThreshold(transformed_thresholded,transformed_thresholded,255,ADAPTIVE_THRESH_GAUSSIAN_C,THRESH_BINARY,11,12);
 //    threshold( transformed_thresholded, transformed_thresholded, 150, 255,CV_THRESH_BINARY );
 
+    // recognize text
+    myOCR->TesseractRect( transformed.data, 1, transformed.step1(), boundRect.x, boundRect.y, boundRect.width, boundRect.height);
+    const char *text1 = myOCR->GetUTF8Text();
+
+    // remove "newline"
+    string t1(text1);
+//    t1.erase(std::remove(t1.begin(), t1.end(), '\n'), t1.end());
+
+    // print found text
+    printf("found text1: \n");
+    printf(t1.c_str());
+    printf("\n");
+
+
     namedWindow("quadrilateral", CV_WINDOW_KEEPRATIO);
     imshow("quadrilateral", transformed);
 
@@ -105,6 +150,11 @@ int main( int argc, char** argv )
    }
    else
     cout<<"Make sure that your are getting 4 corner using approxPolyDP..."<<endl;
-  return 0;
+
+     // destroy tesseract OCR engine
+     myOCR->Clear();
+     myOCR->End();
+
+     return 0;
   }
 

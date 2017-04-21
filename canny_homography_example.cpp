@@ -61,8 +61,9 @@ int main( int argc, char** argv )
   /// Show the image
    CannyThreshold(0, 0);
 
-
-
+   namedWindow("detected_edges", CV_WINDOW_KEEPRATIO);
+   imshow("detected_edges",detected_edges);
+   waitKey();
  ///********HOMOGRAFIA*********///
 
  vector< vector <Point> > contours; // Vector for storing contour

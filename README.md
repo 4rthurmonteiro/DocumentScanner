@@ -30,3 +30,8 @@ $ make
 ```
 Com isso, o executável será gerado.
 
+***UPDATE***
+Inclusão do OCR parcialmente concluída. Tesseract já executando
+![exemplo_tesseract](ocr_example.jpeg)
+
+*Ainda com alguns problemas na integração com o código anterior. Correção em andamento*
