@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/features2d.hpp>
@@ -36,14 +37,17 @@ int main( int argc, char** argv )
   exit(1);
  }
 
- tesseract::PageSegMode pagesegmode = static_cast<tesseract::PageSegMode>(7); // treat the image as a single text line
+// PSM_SPARSE_TEXT = 11,    ///< Find as much text as possible in no particular order.
+// PSM_SPARSE_TEXT_OSD = 12,  ///< Sparse text with orientation and script det.
+// treat the image as a single text line
+ tesseract::PageSegMode pagesegmode = static_cast<tesseract::PageSegMode>(11);
  myOCR->SetPageSegMode(pagesegmode);
 
  Mat src=imread(argv[1]);
  Mat thr;
 
  cvtColor(src,thr,CV_BGR2GRAY);
- threshold( thr, thr, 75, 255,CV_THRESH_BINARY );
+ threshold( thr, thr, 120, 255,CV_THRESH_BINARY );
 
 
  namedWindow("thr_init", CV_WINDOW_KEEPRATIO);
@@ -71,8 +75,8 @@ int main( int argc, char** argv )
  approxPolyDP( Mat(contours[largest_contour_index]), contours_poly[0],40, true );
  Rect boundRect=boundingRect(contours[largest_contour_index]);
 
- namedWindow("bound", CV_WINDOW_KEEPRATIO);
- imshow("bound",Mat(src,boundRect));
+ namedWindow("boundRect in the Image", CV_WINDOW_KEEPRATIO);
+ imshow("boundRect in the Image",Mat(src,boundRect));
  waitKey();
 
  cout<<"the points of contours_poly[0] are "<<contours_poly[0]<<endl;
@@ -110,51 +114,52 @@ int main( int argc, char** argv )
     transformed = transformed(boundRect); //cut image for the interesting region
 
     cvtColor(transformed,transformed_thresholded,CV_BGR2GRAY);
-
-    adaptiveThreshold(transformed_thresholded,transformed_thresholded,255,ADAPTIVE_THRESH_GAUSSIAN_C,THRESH_BINARY,11,12);
-//    threshold( transformed_thresholded, transformed_thresholded, 150, 255,CV_THRESH_BINARY );
+//    adaptiveThreshold(transformed_thresholded,transformed_thresholded,255,ADAPTIVE_THRESH_GAUSSIAN_C,THRESH_BINARY,5,6);
+    threshold( transformed_thresholded, transformed_thresholded, 120, 255,CV_THRESH_BINARY );
 
     // recognize text
-    myOCR->TesseractRect( transformed.data, 1, transformed.step1(), boundRect.x, boundRect.y, boundRect.width, boundRect.height);
+//    myOCR->TesseractRect( transformed.data, 1, transformed.step1(), boundRect.x, boundRect.y, boundRect.width, boundRect.height);
+    myOCR->TesseractRect( transformed_thresholded.data, 1, transformed_thresholded.step1(), 0, 0, transformed_thresholded.cols, transformed_thresholded.rows);
     const char *text1 = myOCR->GetUTF8Text();
 
     // remove "newline"
     string t1(text1);
-//    t1.erase(std::remove(t1.begin(), t1.end(), '\n'), t1.end());
+    // t1.erase(std::remove(t1.begin(), t1.end(), '\n'), t1.end());
 
     // print found text
-    printf("found text1: \n");
-    printf(t1.c_str());
-    printf("\n");
+    cout << t1.c_str() << endl;
+
+    //write to file
+    ofstream outfile ("out.txt");
+    outfile << text1 << std::endl;
+    outfile.close();
 
 
-    namedWindow("quadrilateral", CV_WINDOW_KEEPRATIO);
-    imshow("quadrilateral", transformed);
+    namedWindow("Transformed Image", CV_WINDOW_KEEPRATIO);
+    imshow("Transformed Image", transformed);
 
-    namedWindow("thresholded", CV_WINDOW_KEEPRATIO);
-    imshow("thresholded", transformed_thresholded);
+    namedWindow("Transformed Image Thresholded", CV_WINDOW_KEEPRATIO);
+    imshow("Transformed Image Thresholded", transformed_thresholded);
 
-    namedWindow("thr", CV_WINDOW_KEEPRATIO);
-    imshow("thr",thr);
-
-    namedWindow("dst", CV_WINDOW_KEEPRATIO);
-    imshow("dst",dst);
+//    namedWindow("thr", CV_WINDOW_KEEPRATIO);
+//    imshow("thr",thr);
+//    namedWindow("dst", CV_WINDOW_KEEPRATIO);
+//    imshow("dst",dst);
 
     namedWindow("src", CV_WINDOW_KEEPRATIO);
     imshow("src",src);
 
-    imwrite("result4.jpg",dst);
-    imwrite("result5.jpg",src);
-    imwrite("result6.jpg",transformed);
+    imwrite("transformed.jpg",transformed);
+    imwrite("transformed_thresholded.jpg",transformed_thresholded);
     waitKey();
    }
    else
     cout<<"Make sure that your are getting 4 corner using approxPolyDP..."<<endl;
 
-     // destroy tesseract OCR engine
-     myOCR->Clear();
-     myOCR->End();
+ // destroy tesseract OCR engine
+ myOCR->Clear();
+ myOCR->End();
 
-     return 0;
-  }
+  return 0;
+ }
 
