@@ -31,7 +31,16 @@ $ make
 Com isso, o executável será gerado.
 
 ***UPDATE***
+
 Inclusão do OCR parcialmente concluída. Tesseract já executando
 ![exemplo_tesseract](ocr_example.jpeg)
 
 *Ainda com alguns problemas na integração com o código anterior. Correção em andamento*
+
+***UPDATE2***
+
+OCR já integrado com o código do projeto.
+![cupons](cupons_fiscais.png)
+*Imagem passada via parâmetro*
+
+**Saída disponível no arquivo output.txt**
