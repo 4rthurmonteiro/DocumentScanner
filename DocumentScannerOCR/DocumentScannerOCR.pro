@@ -45,6 +45,7 @@ LIBS += -L/usr/local/lib \
 -lopencv_objdetect \
 -lopencv_flann \
 -lopencv_viz \
--lopencv_sfm
+-lopencv_sfm \
+-ltesseract
 
 # --- ENDOF --- OpenCV paths for headers and libs

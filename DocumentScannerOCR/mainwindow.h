@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
-
+#include <tesseract/baseapi.h>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
