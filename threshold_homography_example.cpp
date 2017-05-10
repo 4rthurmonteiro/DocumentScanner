@@ -15,11 +15,17 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/xfeatures2d.hpp>
 #include <tesseract/baseapi.h>
+#include <algorithm>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
 using namespace std;
 
+void filterPoints(vector<Point> &points);
+
+bool comparatorY  (Point pt1, Point pt2) { return (pt1.y < pt2.y);}
+bool comparatorX  (Point pt1, Point pt2) { return (pt1.x < pt2.x);}
+bool comparatorXY  (Point pt1, Point pt2) {return (pt1.x <= pt2.x && pt1.y <= pt2.y);}
 
 /* @function main */
 int main( int argc, char** argv )
@@ -47,11 +53,12 @@ int main( int argc, char** argv )
  Mat thr;
 
  cvtColor(src,thr,CV_BGR2GRAY);
- threshold( thr, thr, 120, 255,CV_THRESH_BINARY );
+ //threshold( thr, thr, 120, 255,CV_THRESH_BINARY );
+ threshold(thr,thr, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
 
 
- namedWindow("thr_init", CV_WINDOW_KEEPRATIO);
- imshow("thr_init",thr);
+ namedWindow("otsu_threshold", CV_WINDOW_KEEPRATIO);
+ imshow("otsu_threshold",thr);
  waitKey();
 
  vector< vector <Point> > contours; // Vector for storing contour
@@ -72,33 +79,42 @@ int main( int argc, char** argv )
 
  drawContours( dst,contours, largest_contour_index, Scalar(255,255,255),CV_FILLED, 8, hierarchy );
  vector<vector<Point> > contours_poly(1);
- approxPolyDP( Mat(contours[largest_contour_index]), contours_poly[0],40, true );
- Rect boundRect=boundingRect(contours[largest_contour_index]);
+ approxPolyDP( Mat(contours[largest_contour_index]), contours_poly[0],10, true );
 
- namedWindow("boundRect in the Image", CV_WINDOW_KEEPRATIO);
- imshow("boundRect in the Image",Mat(src,boundRect));
+ Rect boundRect=boundingRect(contours[largest_contour_index]);
+ Mat cropped(src, boundRect);
+
+ namedWindow("cropped Image", CV_WINDOW_KEEPRATIO);
+ imshow("cropped Image",cropped);
  waitKey();
+
+ cout<<"the points of contours_poly[0] before filter are "<<contours_poly[0]<<endl;
+
+// filterPoints(contours_poly[0]);
 
  cout<<"the points of contours_poly[0] are "<<contours_poly[0]<<endl;
 
  if(contours_poly[0].size()==4){
+
     std::vector<Point2f> quad_pts;
     std::vector<Point2f> squre_pts;
     quad_pts.push_back(Point2f(contours_poly[0][0].x,contours_poly[0][0].y));
-    quad_pts.push_back(Point2f(contours_poly[0][1].x,contours_poly[0][1].y));
     quad_pts.push_back(Point2f(contours_poly[0][3].x,contours_poly[0][3].y));
     quad_pts.push_back(Point2f(contours_poly[0][2].x,contours_poly[0][2].y));
+    quad_pts.push_back(Point2f(contours_poly[0][1].x,contours_poly[0][1].y));
     squre_pts.push_back(Point2f(boundRect.x,boundRect.y));
     squre_pts.push_back(Point2f(boundRect.x,boundRect.y+boundRect.height));
     squre_pts.push_back(Point2f(boundRect.x+boundRect.width,boundRect.y));
     squre_pts.push_back(Point2f(boundRect.x+boundRect.width,boundRect.y+boundRect.height));
 
+    cout << quad_pts << endl;
+    cout << squre_pts << endl;
     Mat transmtx = getPerspectiveTransform(quad_pts,squre_pts);
     Mat transformed = Mat::zeros(src.rows, src.cols, CV_8UC3);
     warpPerspective(src, transformed, transmtx, src.size());
     Point P1=contours_poly[0][0];
-    Point P2=contours_poly[0][1];
-    Point P3=contours_poly[0][2];
+    Point P2=contours_poly[0][2];
+    Point P3=contours_poly[0][1];
     Point P4=contours_poly[0][3];
 
 
@@ -115,7 +131,8 @@ int main( int argc, char** argv )
 
     cvtColor(transformed,transformed_thresholded,CV_BGR2GRAY);
 //    adaptiveThreshold(transformed_thresholded,transformed_thresholded,255,ADAPTIVE_THRESH_GAUSSIAN_C,THRESH_BINARY,5,6);
-    threshold( transformed_thresholded, transformed_thresholded, 120, 255,CV_THRESH_BINARY );
+//    threshold( transformed_thresholded, transformed_thresholded, 120, 255,CV_THRESH_BINARY );
+    threshold(transformed_thresholded, transformed_thresholded, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
 
     // recognize text
 //    myOCR->TesseractRect( transformed.data, 1, transformed.step1(), boundRect.x, boundRect.y, boundRect.width, boundRect.height);
@@ -138,8 +155,8 @@ int main( int argc, char** argv )
     namedWindow("Transformed Image", CV_WINDOW_KEEPRATIO);
     imshow("Transformed Image", transformed);
 
-    namedWindow("Transformed Image Thresholded", CV_WINDOW_KEEPRATIO);
-    imshow("Transformed Image Thresholded", transformed_thresholded);
+    namedWindow("Transformed Image Otsu Threshold", CV_WINDOW_KEEPRATIO);
+    imshow("Transformed Image Otsu Threshold", transformed_thresholded);
 
 //    namedWindow("thr", CV_WINDOW_KEEPRATIO);
 //    imshow("thr",thr);
@@ -163,3 +180,22 @@ int main( int argc, char** argv )
   return 0;
  }
 
+
+
+void filterPoints(vector<Point> &points) {
+
+    vector<Point> points_temp;
+
+    sort(points.begin(),points.end(),comparatorX);
+    points_temp.push_back(points[0]);
+    points_temp.push_back(points[points.size()-1]);
+
+    sort(points.begin(),points.end(),comparatorY);
+    points_temp.push_back(points[0]);
+    points_temp.push_back(points[points.size()-1]);
+
+
+    points.clear();
+    points = points_temp;
+    cout << "The filter points are "<<points<<endl;
+}

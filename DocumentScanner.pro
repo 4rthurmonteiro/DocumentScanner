@@ -3,12 +3,7 @@ CONFIG += console c++11
 CONFIG -= app_bundle
 CONFIG -= qt
 
-SOURCES += main.cpp \
-    homography_card_file.cpp \
-    edge_detector.cpp \
-    canny_homography_example.cpp \
-    threshold_homography_example.cpp \
-    opencv-tesseract.cpp
+SOURCES += threshold_homography_example.cpp \
 
 INCLUDEPATH += /usr/local/include/opencv
 
@@ -25,6 +20,7 @@ LIBS += -L/usr/local/lib \
 -lopencv_objdetect \
 -lopencv_flann \
 -lopencv_viz \
--lopencv_sfm
+-lopencv_sfm \
+-ltesseract
 
 # --- ENDOF --- OpenCV paths for headers and libs
