@@ -5,6 +5,8 @@
 #include <QTextStream>
 #include <QPixmap>
 #include <QLabel>
+#include "functions.cpp"
+#include <QScrollBar>
 
 using namespace cv;
 
@@ -34,6 +36,8 @@ void MainWindow::on_openButton_clicked()
     image = imread(fileName.toLatin1().data());
     //namedWindow("Original Image");
     //imshow("Original Image", image);
+    ui->label->setText("Imagem carregada..\nClique em DocumentScanner para continuar.\n");
+    ui->label->adjustSize();
 }
 
 void MainWindow::on_processButton_clicked()
@@ -43,16 +47,11 @@ void MainWindow::on_processButton_clicked()
      tesseract::TessBaseAPI *myOCR = new tesseract::TessBaseAPI();
      printf("Tesseract-ocr version: %s\n",myOCR->Version());
 
-     // printf("Leptonica version: %s\n",
-     //        getLeptonicaVersion());
-
      if (myOCR->Init(NULL, "eng")) {
       fprintf(stderr, "Could not initialize tesseract.\n");
       exit(1);
      }
 
-    // PSM_SPARSE_TEXT = 11,    ///< Find as much text as possible in no particular order.
-    // PSM_SPARSE_TEXT_OSD = 12,  ///< Sparse text with orientation and script det.
     // treat the image as a single text line
      tesseract::PageSegMode pagesegmode = static_cast<tesseract::PageSegMode>(11);
      myOCR->SetPageSegMode(pagesegmode);
@@ -63,10 +62,7 @@ void MainWindow::on_processButton_clicked()
      cvtColor(image,thr,CV_BGR2GRAY);
      threshold( thr, thr, 120, 255,CV_THRESH_BINARY );
 
-
-//     namedWindow("thr_init", CV_WINDOW_KEEPRATIO);
-//     imshow("thr_init",thr);
-     waitKey();
+//     waitKey();
 
      vector< vector <Point> > contours; // Vector for storing contour
      vector< Vec4i > hierarchy;
@@ -83,15 +79,19 @@ void MainWindow::on_processButton_clicked()
         }
      }
 
-
      drawContours( dst,contours, largest_contour_index, Scalar(255,255,255),CV_FILLED, 8, hierarchy );
      vector<vector<Point> > contours_poly(1);
      approxPolyDP( Mat(contours[largest_contour_index]), contours_poly[0],40, true );
+
      Rect boundRect=boundingRect(contours[largest_contour_index]);
 
-//     namedWindow("boundRect in the Image", CV_WINDOW_KEEPRATIO);
-//     imshow("boundRect in the Image",Mat(image,boundRect));
+//     Mat cropped(image, boundRect);
 
+//     namedWindow("cropped Image", CV_WINDOW_KEEPRATIO);
+//     imshow("cropped Image",cropped);
+//     waitKey();
+
+     cout<<"the points of contours_poly[0] before filter are "<<contours_poly[0]<<endl;
      cout<<"the points of contours_poly[0] are "<<contours_poly[0]<<endl;
 
      if(contours_poly[0].size()==4){
@@ -105,6 +105,9 @@ void MainWindow::on_processButton_clicked()
         squre_pts.push_back(Point2f(boundRect.x,boundRect.y+boundRect.height));
         squre_pts.push_back(Point2f(boundRect.x+boundRect.width,boundRect.y));
         squre_pts.push_back(Point2f(boundRect.x+boundRect.width,boundRect.y+boundRect.height));
+
+        cout << quad_pts << endl;
+        cout << squre_pts << endl;
 
         Mat transmtx = getPerspectiveTransform(quad_pts,squre_pts);
         Mat transformed = Mat::zeros(image.rows, image.cols, CV_8UC3);
@@ -127,17 +130,14 @@ void MainWindow::on_processButton_clicked()
         transformed = transformed(boundRect); //cut image for the interesting region
 
         cvtColor(transformed,transformed_thresholded,CV_BGR2GRAY);
-    //    adaptiveThreshold(transformed_thresholded,transformed_thresholded,255,ADAPTIVE_THRESH_GAUSSIAN_C,THRESH_BINARY,5,6);
-        threshold( transformed_thresholded, transformed_thresholded, 120, 255,CV_THRESH_BINARY );
+        threshold(transformed_thresholded, transformed_thresholded, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
 
         // recognize text
-    //    myOCR->TesseractRect( transformed.data, 1, transformed.step1(), boundRect.x, boundRect.y, boundRect.width, boundRect.height);
         myOCR->TesseractRect( transformed_thresholded.data, 1, transformed_thresholded.step1(), 0, 0, transformed_thresholded.cols, transformed_thresholded.rows);
         const char *text1 = myOCR->GetUTF8Text();
 
         // remove "newline"
         string t1(text1);
-        // t1.erase(std::remove(t1.begin(), t1.end(), '\n'), t1.end());
 
         // print found text
         cout << t1.c_str() << endl;
@@ -145,13 +145,18 @@ void MainWindow::on_processButton_clicked()
         //write to file
         ofstream outfile ("out.txt");
         outfile << text1 << std::endl;
+
         ui->label->setText(QString::fromStdString(text1));
         ui->label->adjustSize();
+        //ui->label->scroll(400,400);
+
         outfile.close();
 
        }
        else{
-        cout<<"Make sure that your are getting 4 corner using approxPolyDP..."<<endl;
+         ui->label->setText("Aviso:\nNão foi possível gerar um arquivo texto da imagem.\n\nAs possíveis soluções pode ser:\n ->Fundo da imagem sem um bom contraste.\n ->Objetos, dedos e outras coisas ao redor do documento.\n -> Foto tirada inclinada, o documento precisa estar alinhado o máximo possível.\n");
+         ui->label->adjustSize();
+        cout<<"Essa imagem não é possível de carregar!"<<endl;
 
 }
      // destroy tesseract OCR engine

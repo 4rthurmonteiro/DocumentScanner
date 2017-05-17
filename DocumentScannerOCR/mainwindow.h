@@ -14,6 +14,7 @@
 #include <iostream>
 #include <fstream>
 #include <tesseract/baseapi.h>
+#include <algorithm>
 
 using namespace cv;
 using namespace cv::xfeatures2d;
