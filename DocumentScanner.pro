@@ -4,6 +4,7 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += threshold_homography_example.cpp \
+           distance_transform.cpp
 
 INCLUDEPATH += /usr/local/include/opencv
 

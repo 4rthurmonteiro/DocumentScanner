@@ -25,8 +25,8 @@ if(CMAKE_VERSION VERSION_LESS "2.8.11")
 endif()
 
 # Declare the executable target built from your sources
-add_executable(threshold_homography_example threshold_homography_example.cpp)
+add_executable(documentScanner threshold_homography_example.cpp)
 
 # Link your application with OpenCV libraries
-target_link_libraries(threshold_homography_example ${OpenCV_LIBS})
-target_link_libraries(threshold_homography_example tesseract)
+target_link_libraries(documentScanner ${OpenCV_LIBS})
+target_link_libraries(documentScanner tesseract)
