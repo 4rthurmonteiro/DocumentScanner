@@ -22,10 +22,11 @@ using namespace cv::xfeatures2d;
 using namespace std;
 
 void filterPoints(vector<Point> &points);
-
+float normalizeAngle(RotatedRect calculatedRect);
 bool comparatorY  (Point pt1, Point pt2) { return (pt1.y < pt2.y);}
 bool comparatorX  (Point pt1, Point pt2) { return (pt1.x < pt2.x);}
 bool comparatorXY  (Point pt1, Point pt2) {return (pt1.x <= pt2.x && pt1.y <= pt2.y);}
+enum orientation {RIGHT,LEFT};
 
 /* @function main */
 int main( int argc, char** argv )
@@ -35,8 +36,6 @@ int main( int argc, char** argv )
  tesseract::TessBaseAPI *myOCR = new tesseract::TessBaseAPI();
  printf("Tesseract-ocr version: %s\n",myOCR->Version());
 
- // printf("Leptonica version: %s\n",
- //        getLeptonicaVersion());
 
  if (myOCR->Init(NULL, "eng")) {
   fprintf(stderr, "Could not initialize tesseract.\n");
@@ -52,10 +51,43 @@ int main( int argc, char** argv )
  Mat src=imread(argv[1]);
  Mat thr;
 
+
+ //==================== IMPROVE EDGES - LAPLACIAN =============================
+ // Create a kernel that we will use for accuting/sharpening our image
+ Mat kernel = (Mat_<float>(3,3) <<
+         1,  1, 1,
+         1, -8, 1,
+         1,  1, 1); // an approximation of second derivative, a quite strong kernel
+ // do the laplacian filtering as it is
+ // well, we need to convert everything in something more deeper then CV_8U
+ // because the kernel has some negative values,
+ // and we can expect in general to have a Laplacian image with negative values
+ // BUT a 8bits unsigned int (the one we are working with) can contain values from 0 to 255
+ // so the possible negative number will be truncated
+ Mat imgLaplacian;
+ Mat sharp = src; // copy source image to another temporary one
+ filter2D(sharp, imgLaplacian, CV_32F, kernel);
+ src.convertTo(sharp, CV_32F);
+ Mat imgResult = sharp - imgLaplacian;
+ // convert back to 8bits gray scale
+ imgResult.convertTo(imgResult, CV_8UC3);
+ imgLaplacian.convertTo(imgLaplacian, CV_8UC3);
+ // imshow( "Laplace Filtered Image", imgLaplacian );
+ namedWindow("New Sharped Image",CV_WINDOW_KEEPRATIO);
+ imshow( "New Sharped Image", imgResult );
+ waitKey();
+
+ src = imgResult;
+ //==========================================================================
+
+ //===============THRESHOLD AND MORPHOLOGY =================================
  cvtColor(src,thr,CV_BGR2GRAY);
  //threshold( thr, thr, 120, 255,CV_THRESH_BINARY );
  threshold(thr,thr, 0, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
-
+ // Dilate a bit the dist image
+ Mat kernel1 = Mat::ones(20,20, CV_8UC1);
+ morphologyEx(thr,thr,MORPH_OPEN,kernel1);
+ //=========================================================================
 
  namedWindow("otsu_threshold", CV_WINDOW_KEEPRATIO);
  imshow("otsu_threshold",thr);
@@ -66,8 +98,13 @@ int main( int argc, char** argv )
  int largest_contour_index=0;
  int largest_area=0;
 
+ //MAYBE IS NOT CAUSING ANY EFFECT
+ //Size kernalSize (5,5);
+ //Mat element = getStructuringElement (MORPH_RECT, kernalSize, Point(1,1)  );
+ //morphologyEx( thr, thr, MORPH_CLOSE, element );
+
  Mat dst(src.rows,src.cols,CV_8UC1,Scalar::all(0)); //create destination image
- findContours( thr.clone(), contours, hierarchy,CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE ); // Find the contours in the image
+ findContours( thr.clone(), contours, hierarchy,CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE); // Find the contours in the image
  for( int i = 0; i< contours.size(); i++ ){
     double a=contourArea( contours[i],false);  //  Find the area of contour
     if(a>largest_area){
@@ -76,32 +113,58 @@ int main( int argc, char** argv )
     }
  }
 
+ cout<<"contours[largest_contour_index] = "<<contours[largest_contour_index]<<endl;
 
  drawContours( dst,contours, largest_contour_index, Scalar(255,255,255),CV_FILLED, 8, hierarchy );
  vector<vector<Point> > contours_poly(1);
- approxPolyDP( Mat(contours[largest_contour_index]), contours_poly[0],10, true );
+ approxPolyDP( Mat(contours[largest_contour_index]), contours_poly[0],60,true);
+
+ namedWindow("dst contours", CV_WINDOW_KEEPRATIO);
+ imshow("dst contours",dst);
+ waitKey();
 
  Rect boundRect=boundingRect(contours[largest_contour_index]);
  Mat cropped(src, boundRect);
+
+ cout <<"BoundRect value: "<<boundRect<<endl;
 
  namedWindow("cropped Image", CV_WINDOW_KEEPRATIO);
  imshow("cropped Image",cropped);
  waitKey();
 
+//========= Get image rotate ================================================
+ RotatedRect rotated_rect = minAreaRect(contours[largest_contour_index]);
+ float blob_angle_deg = rotated_rect.angle;
+ int ORIENTATION;
+ cout<<"The angle before: "<<blob_angle_deg<<endl;
+ blob_angle_deg = normalizeAngle(rotated_rect);
+ if(blob_angle_deg < 90){
+     cout<<"The image is rotate to right by "<<blob_angle_deg<<" degress."<<endl;
+     ORIENTATION = RIGHT;
+ }else{
+     cout<<"The image is rotate to left by "<<180-blob_angle_deg<<" degress."<<endl;
+     ORIENTATION = LEFT;
+ }
  cout<<"the points of contours_poly[0] before filter are "<<contours_poly[0]<<endl;
-
+//===========================================================================
 // filterPoints(contours_poly[0]);
-
- cout<<"the points of contours_poly[0] are "<<contours_poly[0]<<endl;
+//cout<<"the points of contours_poly[0] are "<<contours_poly[0]<<endl;
 
  if(contours_poly[0].size()==4){
 
     std::vector<Point2f> quad_pts;
     std::vector<Point2f> squre_pts;
-    quad_pts.push_back(Point2f(contours_poly[0][0].x,contours_poly[0][0].y));
-    quad_pts.push_back(Point2f(contours_poly[0][3].x,contours_poly[0][3].y));
-    quad_pts.push_back(Point2f(contours_poly[0][2].x,contours_poly[0][2].y));
-    quad_pts.push_back(Point2f(contours_poly[0][1].x,contours_poly[0][1].y));
+    if(ORIENTATION == RIGHT){
+        quad_pts.push_back(Point2f(contours_poly[0][0].x,contours_poly[0][0].y));
+        quad_pts.push_back(Point2f(contours_poly[0][1].x,contours_poly[0][1].y));
+        quad_pts.push_back(Point2f(contours_poly[0][3].x,contours_poly[0][3].y));
+        quad_pts.push_back(Point2f(contours_poly[0][2].x,contours_poly[0][2].y));
+    }else if(ORIENTATION == LEFT){
+        quad_pts.push_back(Point2f(contours_poly[0][1].x,contours_poly[0][1].y));
+        quad_pts.push_back(Point2f(contours_poly[0][2].x,contours_poly[0][2].y));
+        quad_pts.push_back(Point2f(contours_poly[0][0].x,contours_poly[0][0].y));
+        quad_pts.push_back(Point2f(contours_poly[0][3].x,contours_poly[0][3].y));
+    }
     squre_pts.push_back(Point2f(boundRect.x,boundRect.y));
     squre_pts.push_back(Point2f(boundRect.x,boundRect.y+boundRect.height));
     squre_pts.push_back(Point2f(boundRect.x+boundRect.width,boundRect.y));
@@ -113,8 +176,8 @@ int main( int argc, char** argv )
     Mat transformed = Mat::zeros(src.rows, src.cols, CV_8UC3);
     warpPerspective(src, transformed, transmtx, src.size());
     Point P1=contours_poly[0][0];
-    Point P2=contours_poly[0][2];
     Point P3=contours_poly[0][1];
+    Point P2=contours_poly[0][2];
     Point P4=contours_poly[0][3];
 
 
@@ -158,11 +221,6 @@ int main( int argc, char** argv )
     namedWindow("Transformed Image Otsu Threshold", CV_WINDOW_KEEPRATIO);
     imshow("Transformed Image Otsu Threshold", transformed_thresholded);
 
-//    namedWindow("thr", CV_WINDOW_KEEPRATIO);
-//    imshow("thr",thr);
-//    namedWindow("dst", CV_WINDOW_KEEPRATIO);
-//    imshow("dst",dst);
-
     namedWindow("src", CV_WINDOW_KEEPRATIO);
     imshow("src",src);
 
@@ -198,4 +256,14 @@ void filterPoints(vector<Point> &points) {
     points.clear();
     points = points_temp;
     cout << "The filter points are "<<points<<endl;
+}
+
+float normalizeAngle(RotatedRect calculatedRect){
+    float result;
+    if(calculatedRect.size.width < calculatedRect.size.height){
+       result = (float)calculatedRect.angle+180;
+    }else{
+       result = (float)calculatedRect.angle+90;
+    }
+    return result;
 }
