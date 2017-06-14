@@ -1,7 +1,8 @@
 # DocumentScanner
 ### Visão Computacional - UFAL 2016.2
 ***
-
+## Versão Linha de comando - Terminal
+### Versão com interface gráfica via electron [Neste link](https://github.com/alexbatista/ElectronVisaoComputacional)
 ##### Dependências do projeto
 
 Para execução correta do projeto, será necessário a instalação dos seguintes pacotes:

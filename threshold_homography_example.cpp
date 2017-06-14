@@ -230,6 +230,7 @@ int main( int argc, char** argv )
    }
    else
     cout<<"Make sure that your are getting 4 corner using approxPolyDP..."<<endl;
+    // fprintf(stderr, "error");
 
  // destroy tesseract OCR engine
  myOCR->Clear();
